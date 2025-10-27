@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { X, Camera, User, Mail, Calendar, MessageSquare, Settings, Bell, Moon } from 'lucide-react';
 import './ProfileModal.css';
-import { auth } from './firebase';
+import { auth, storage } from './firebase';
 import { updateProfile } from 'firebase/auth';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const ProfileModal = ({ user, onClose, messageCount = 0 }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -12,12 +13,15 @@ const ProfileModal = ({ user, onClose, messageCount = 0 }) => {
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
-  const [settings, setSettings] = useState({
-    notifications: true,
-    darkMode: false,
-    soundEnabled: true
-  });
-  
+  // Load settings from localStorage or use defaults
+  const getInitialSettings = () => {
+    try {
+      const saved = localStorage.getItem('aiii_user_settings');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return { notifications: true, darkMode: false, soundEnabled: true };
+  };
+  const [settings, setSettings] = useState(getInitialSettings);
   const fileInputRef = useRef(null);
 
   const handlePhotoClick = () => {
@@ -44,17 +48,12 @@ const ProfileModal = ({ user, onClose, messageCount = 0 }) => {
     setMessage({ type: '', text: '' });
 
     try {
-      // Create a preview URL
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, photoURL: reader.result });
-      };
-      reader.readAsDataURL(file);
-
-      // TODO: Upload to Firebase Storage
-      // For now, we'll just use the local preview
-      setMessage({ type: 'success', text: 'Photo updated! (Preview only - implement Firebase Storage for permanent upload)' });
-      
+      // Upload to Firebase Storage
+      const storageRef = ref(storage, `profile_photos/${auth.currentUser.uid}/${file.name}`);
+      await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(storageRef);
+      setFormData({ ...formData, photoURL: downloadURL });
+      setMessage({ type: 'success', text: 'Photo uploaded successfully!' });
     } catch (error) {
       console.error('Photo upload error:', error);
       setMessage({ type: 'error', text: 'Failed to upload photo' });
@@ -104,12 +103,28 @@ const ProfileModal = ({ user, onClose, messageCount = 0 }) => {
   };
 
   const handleToggleSetting = (setting) => {
-    setSettings({
-      ...settings,
-      [setting]: !settings[setting]
+    setSettings(prev => {
+      const updated = { ...prev, [setting]: !prev[setting] };
+      try {
+        localStorage.setItem('aiii_user_settings', JSON.stringify(updated));
+      } catch {}
+      return updated;
     });
-    // TODO: Save settings to Firebase or localStorage
   };
+  // Keep settings in sync with localStorage if changed elsewhere
+  React.useEffect(() => {
+    const syncSettings = () => {
+      try {
+        const saved = localStorage.getItem('aiii_user_settings');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setSettings(s => ({ ...s, ...parsed }));
+        }
+      } catch {}
+    };
+    window.addEventListener('storage', syncSettings);
+    return () => window.removeEventListener('storage', syncSettings);
+  }, []);
 
   const getJoinDate = () => {
     const creationTime = auth.currentUser?.metadata?.creationTime;
