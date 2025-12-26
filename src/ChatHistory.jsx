@@ -230,9 +230,14 @@ const ChatHistory = ({ user, currentChatId, onSelectChat, onNewChat, darkMode, i
     <div className={`chat-history ${darkMode ? 'dark-mode' : ''} ${isVisible ? 'show' : ''}`}>
       <div className="chat-history-header">
         <h3>Chat History</h3>
-        <button className="new-chat-button" onClick={onNewChat} title="New Chat">
-          <Plus size={18} />
-        </button>
+        <div className="chat-history-header-buttons">
+          <button className="new-chat-button" onClick={onNewChat} title="New Chat">
+            <Plus size={18} />
+          </button>
+          <button className="close-history-button" onClick={onClose} title="Back to Chat">
+            <X size={18} />
+          </button>
+        </div>
       </div>
 
       {/* Category Filter */}

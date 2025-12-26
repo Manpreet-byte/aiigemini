@@ -35,8 +35,13 @@ const App = ({ user, onLogout }) => {
   const [userMessageCount, setUserMessageCount] = useState(0);
   // Current chat session ID
   const [currentChatId, setCurrentChatId] = useState(null);
-  // Show/hide chat history sidebar
-  const [showHistory, setShowHistory] = useState(true);
+  // Show/hide chat history sidebar - hidden by default on mobile, shown on desktop
+  const [showHistory, setShowHistory] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth > 768;
+    }
+    return true;
+  });
   // Voice recording state
   const [isRecording, setIsRecording] = useState(false);
   // Selected image for upload
@@ -123,6 +128,20 @@ const App = ({ user, onLogout }) => {
   useEffect(() => {
     inputFieldRef.current?.focus();
   }, [currentChatId]);
+
+  // Handle window resize to show/hide sidebar based on viewport
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth > 768) {
+        setShowHistory(true);
+      } else {
+        setShowHistory(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Create a new chat session
   const createNewChat = async () => {
