@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Loader, LogOut, UserCircle, Menu, Download, Share2, Mic, Image as ImageIcon, Copy, RotateCw, Volume2, VolumeX, Keyboard } from 'lucide-react';
+import { Send, Bot, User, Loader, LogOut, UserCircle, Menu, Download, Share2, Mic, Image as ImageIcon, Copy, RotateCw, Volume2, VolumeX } from 'lucide-react';
 import './Chat.css';
 import ProfileModal from './ProfileModal';
 import ChatHistory from './ChatHistory';
@@ -7,9 +7,10 @@ import { db } from './firebase';
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, where, updateDoc, doc } from 'firebase/firestore';
 
 // --- CONFIGURATION ---
-const API_KEY = "AIzaSyA8CpWSAZzuRi88v0P_tEBilieygD2FyWs"; 
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${API_KEY}`;
-const VISION_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${API_KEY}`;
+// Backend API base URL (defaults to local dev server, or Vercel API routes in production)
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:3001/api' : '/api');
+const API_URL = `${API_BASE_URL}/chat`;
+const VISION_API_URL = `${API_BASE_URL}/vision`;
 const SYSTEM_INSTRUCTION = "You are a helpful and friendly AI chat assistant. Keep your responses concise and engaging, and always answer truthfully and ethically. Respond using markdown. If the user asks you to generate, create, or draw an image, respond with '[IMAGE_REQUEST: description]' where description is a detailed prompt for the image they want.";
 
 // Free image generation API (Pollinations.ai)
@@ -51,7 +52,6 @@ const App = ({ user, onLogout }) => {
     const saved = localStorage.getItem('speechEnabled');
     return saved ? JSON.parse(saved) : false;
   });
-  // Shortcuts help modal
   const [showShortcuts, setShowShortcuts] = useState(false);
   
   // Ref to automatically scroll to the bottom of the chat area
@@ -79,45 +79,6 @@ const App = ({ user, onLogout }) => {
     localStorage.setItem('speechEnabled', JSON.stringify(speechEnabled));
   }, [speechEnabled]);
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Ctrl/Cmd + K: New chat
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault();
-        handleNewChat();
-      }
-      // Ctrl/Cmd + /: Toggle history
-      if ((e.ctrlKey || e.metaKey) && e.key === '/') {
-        e.preventDefault();
-        setShowHistory(prev => !prev);
-      }
-      // Ctrl/Cmd + Shift + D: Toggle dark mode
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'D') {
-        e.preventDefault();
-        setDarkMode(prev => !prev);
-      }
-      // Ctrl/Cmd + Shift + S: Toggle speech
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'S') {
-        e.preventDefault();
-        setSpeechEnabled(prev => !prev);
-      }
-      // Escape: Close modals
-      if (e.key === 'Escape') {
-        setShowProfileModal(false);
-        setShowShortcuts(false);
-      }
-      // ?: Show shortcuts
-      if (e.shiftKey && e.key === '?') {
-        e.preventDefault();
-        setShowShortcuts(prev => !prev);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
   // Focus input on load
   useEffect(() => {
     inputFieldRef.current?.focus();
@@ -126,17 +87,25 @@ const App = ({ user, onLogout }) => {
   // Create a new chat session
   const createNewChat = async () => {
     try {
+      console.log('Creating new chat for user:', user?.uid);
       const chatRef = await addDoc(collection(db, "chats"), {
         userId: user?.uid || '',
         title: 'New Chat',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
+        lastMessage: '',
+        lastSender: '',
+        pinned: false,
+        category: 'personal',
       });
+      console.log('New chat created with ID:', chatRef.id);
       setCurrentChatId(chatRef.id);
       setMessages([]);
       return chatRef.id;
     } catch (error) {
       console.error('Error creating new chat:', error);
+      console.error('Error details:', error.message, error.code);
+      alert(`Failed to create chat: ${error.message}`);
       return null;
     }
   };
@@ -397,6 +366,7 @@ const App = ({ user, onLogout }) => {
       }
 
       // 5. Add AI message to Firestore
+      console.log('Saving AI response to Firestore...');
       const aiMessageData = {
         sender: 'ai',
         text: aiText,
@@ -407,16 +377,20 @@ const App = ({ user, onLogout }) => {
       if (generatedImageUrl) {
         aiMessageData.hasImage = true;
         aiMessageData.imageUrl = generatedImageUrl;
+        console.log('AI message includes generated image:', generatedImageUrl);
       }
       
-      await addDoc(collection(db, "messages"), aiMessageData);
+      const aiMessageRef = await addDoc(collection(db, "messages"), aiMessageData);
+      console.log('AI message saved successfully with ID:', aiMessageRef.id);
 
       // Update chat lastMessage for preview
+      console.log('Updating chat metadata...');
       await updateDoc(doc(db, "chats", currentChatId), {
         lastMessage: generatedImageUrl ? `${aiText} [Image]` : aiText,
         lastSender: 'ai',
         updatedAt: serverTimestamp(),
       });
+      console.log('Chat metadata updated successfully');
 
       // 6. Text-to-speech for AI response (if enabled)
       if (speechEnabled && 'speechSynthesis' in window) {
@@ -425,13 +399,30 @@ const App = ({ user, onLogout }) => {
 
     } catch (error) {
       console.error('AI Chat Error:', error);
+      console.error('Error type:', error.name);
+      console.error('Error message:', error.message);
+      
       // Save error message to Firestore
-      await addDoc(collection(db, "messages"), {
-        sender: 'ai',
-        text: "There was an error connecting to the AI service. Please check the console for details.",
-        createdAt: serverTimestamp(),
-        chatId: currentChatId,
-      });
+      try {
+        console.log('Saving error message to Firestore...');
+        const errorMessageRef = await addDoc(collection(db, "messages"), {
+          sender: 'ai',
+          text: `I encountered an error: ${error.message}. Please try again or check your connection.`,
+          createdAt: serverTimestamp(),
+          chatId: currentChatId,
+          isError: true,
+        });
+        console.log('Error message saved with ID:', errorMessageRef.id);
+        
+        // Update chat with error
+        await updateDoc(doc(db, "chats", currentChatId), {
+          lastMessage: "Error occurred",
+          lastSender: 'ai',
+          updatedAt: serverTimestamp(),
+        });
+      } catch (saveError) {
+        console.error('Failed to save error message to Firestore:', saveError);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -737,13 +728,6 @@ const App = ({ user, onLogout }) => {
               {darkMode ? '☀️' : '🌙'}
             </button>
             <button 
-              onClick={() => setShowShortcuts(true)} 
-              className="icon-button" 
-              title="Keyboard shortcuts"
-            >
-              <Keyboard size={18} />
-            </button>
-            <button 
               onClick={handleExportChat} 
               className="icon-button" 
               title="Export chat"
@@ -871,46 +855,6 @@ const App = ({ user, onLogout }) => {
         />
       )}
 
-      {/* Keyboard Shortcuts Modal */}
-      {showShortcuts && (
-        <div className="modal-overlay" onClick={() => setShowShortcuts(false)}>
-          <div className="modal-content shortcuts-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Keyboard Shortcuts</h2>
-              <button onClick={() => setShowShortcuts(false)} className="modal-close-button">×</button>
-            </div>
-            <div className="shortcuts-list">
-              <div className="shortcut-item">
-                <kbd>Ctrl</kbd> + <kbd>K</kbd>
-                <span>New chat</span>
-              </div>
-              <div className="shortcut-item">
-                <kbd>Ctrl</kbd> + <kbd>/</kbd>
-                <span>Toggle chat history</span>
-              </div>
-              <div className="shortcut-item">
-                <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>D</kbd>
-                <span>Toggle dark mode</span>
-              </div>
-              <div className="shortcut-item">
-                <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd>
-                <span>Toggle text-to-speech</span>
-              </div>
-              <div className="shortcut-item">
-                <kbd>Shift</kbd> + <kbd>?</kbd>
-                <span>Show shortcuts</span>
-              </div>
-              <div className="shortcut-item">
-                <kbd>Esc</kbd>
-                <span>Close modals</span>
-              </div>
-            </div>
-            <p style={{ marginTop: '1rem', fontSize: '0.85rem', opacity: 0.7 }}>
-              On Mac, use <kbd>Cmd</kbd> instead of <kbd>Ctrl</kbd>
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

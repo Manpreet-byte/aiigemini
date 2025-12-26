@@ -1,16 +1,76 @@
-# React + Vite
+# AI Chat – Full‑Stack
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An internship‑grade full‑stack AI chat application built with React + Vite, Firebase (Auth, Firestore, Storage), and a secure Node/Express backend proxying Google Gemini text + vision APIs. Supports voice input, text‑to‑speech, image uploads/analysis, AI image generation, chat history with search/pin/delete, responsive design, and keyboard shortcuts.
 
-Currently, two official plugins are available:
+## Stack
+- Frontend: React + Vite
+- Backend: Node.js + Express (secure Gemini proxy)
+- Data: Firebase Auth, Firestore, Storage
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Features
+- Secure server‑side Gemini calls (no API key in browser)
+- Text + Vision endpoints with retries and error handling
+- Voice input and text‑to‑speech toggle
+- Image upload, analysis, and generation (Pollinations)
+- Chat history with search, pin, clear all (batch delete)
+- Fully responsive UI (mobile‑first with overlays)
 
-## React Compiler
+## Setup
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1) Frontend environment
+Create `.env` in project root based on `.env.example`:
 
-## Expanding the ESLint configuration
+```
+VITE_API_BASE_URL=http://localhost:3001/api
+VITE_FIREBASE_API_KEY=your_firebase_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-project-id
+VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=000000000000
+VITE_FIREBASE_APP_ID=1:000000000000:web:xxxxxxxxxxxxxxxx
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+2) Backend environment
+Create `server/.env` based on `server/.env.example`:
+
+```
+PORT=3001
+ALLOWED_ORIGIN=http://localhost:5174
+GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+3) Install dependencies
+
+```bash
+# Frontend
+npm install
+
+# Backend
+cd server && npm install
+```
+
+## Run (local dev)
+
+```bash
+# Start backend
+cd server && npm run dev
+
+# In another terminal, start frontend
+cd .. && npm run dev
+```
+
+Frontend dev server: `http://localhost:5174/`
+Backend server: `http://localhost:3001/api`
+
+## Deployment
+- Frontend: Netlify/Vercel (build `npm run build`, publish `dist/`)
+- Backend: Render/Heroku/Fly.io (Node server); set env vars and CORS
+- Firebase: Add deployed domain in Auth settings; Firestore/Storage already configured
+
+## Security
+- Gemini API key lives only on the server
+- CORS restricted to your frontend origin
+- Do not commit real secrets; use env vars
+
+## License
+Internal project for learning/demo purposes.
