@@ -719,16 +719,24 @@ const App = ({ user, onLogout }) => {
 
   return (
     <div className={`chat-wrapper ${darkMode ? 'dark-mode' : ''}`}>
-      {/* Chat History Sidebar */}
+      {/* Mobile backdrop for sidebar */}
       {showHistory && (
-        <ChatHistory
-          user={user}
-          currentChatId={currentChatId}
-          onSelectChat={handleSelectChat}
-          onNewChat={handleNewChat}
-          darkMode={darkMode}
+        <div 
+          className="sidebar-backdrop"
+          onClick={() => setShowHistory(false)}
         />
       )}
+
+      {/* Chat History Sidebar */}
+      <ChatHistory
+        user={user}
+        currentChatId={currentChatId}
+        onSelectChat={handleSelectChat}
+        onNewChat={handleNewChat}
+        darkMode={darkMode}
+        isVisible={showHistory}
+        onClose={() => setShowHistory(false)}
+      />
 
       <div className="chat-container">
         

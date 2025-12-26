@@ -12,29 +12,42 @@
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
-/* Mobile: slide-in overlay */
+/* Mobile: slide-in overlay with backdrop */
 @media (max-width: 768px) {
   .chat-history {
     position: fixed;
-    left: -280px;
+    left: 0;
     top: 0;
     height: 100vh;
     max-height: 100vh;
     border-radius: 0;
-    z-index: 200;
+    z-index: 100;
     box-shadow: 2px 0 15px rgba(0, 0, 0, 0.3);
-    transition: left 0.3s ease;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
   }
 
   .chat-history.show {
+    transform: translateX(0);
+  }
+
+  /* Backdrop overlay */
+  .chat-history.show::before {
+    content: '';
+    position: fixed;
+    top: 0;
     left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: -1;
   }
 }
 
 @media (max-width: 480px) {
   .chat-history {
     width: 260px;
-    left: -260px;
+    /* Transform is already set in parent 768px rule */
   }
 }
 
