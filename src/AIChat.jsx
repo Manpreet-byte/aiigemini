@@ -35,13 +35,8 @@ const App = ({ user, onLogout }) => {
   const [userMessageCount, setUserMessageCount] = useState(0);
   // Current chat session ID
   const [currentChatId, setCurrentChatId] = useState(null);
-  // Show/hide chat history sidebar - hidden by default on mobile, shown on desktop
-  const [showHistory, setShowHistory] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth > 768;
-    }
-    return true;
-  });
+  // Show/hide chat history sidebar (default: hidden)
+  const [showHistory, setShowHistory] = useState(false);
   // Voice recording state
   const [isRecording, setIsRecording] = useState(false);
   // Selected image for upload
@@ -128,20 +123,6 @@ const App = ({ user, onLogout }) => {
   useEffect(() => {
     inputFieldRef.current?.focus();
   }, [currentChatId]);
-
-  // Handle window resize to show/hide sidebar based on viewport
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth > 768) {
-        setShowHistory(true);
-      } else {
-        setShowHistory(false);
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   // Create a new chat session
   const createNewChat = async () => {
@@ -738,24 +719,16 @@ const App = ({ user, onLogout }) => {
 
   return (
     <div className={`chat-wrapper ${darkMode ? 'dark-mode' : ''}`}>
-      {/* Mobile backdrop for sidebar */}
+      {/* Chat History Sidebar */}
       {showHistory && (
-        <div 
-          className="sidebar-backdrop"
-          onClick={() => setShowHistory(false)}
+        <ChatHistory
+          user={user}
+          currentChatId={currentChatId}
+          onSelectChat={handleSelectChat}
+          onNewChat={handleNewChat}
+          darkMode={darkMode}
         />
       )}
-
-      {/* Chat History Sidebar */}
-      <ChatHistory
-        user={user}
-        currentChatId={currentChatId}
-        onSelectChat={handleSelectChat}
-        onNewChat={handleNewChat}
-        darkMode={darkMode}
-        isVisible={showHistory}
-        onClose={() => setShowHistory(false)}
-      />
 
       <div className="chat-container">
         
