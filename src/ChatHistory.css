@@ -150,7 +150,14 @@
   font-weight: 600;
 }
 
-.new-chat-button {
+.header-buttons {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.new-chat-button,
+.close-history-button {
   background: rgba(255, 255, 255, 0.2);
   border: none;
   border-radius: 8px;
@@ -164,9 +171,14 @@
   transition: all 0.2s ease;
 }
 
-.new-chat-button:hover {
+.new-chat-button:hover,
+.close-history-button:hover {
   background: rgba(255, 255, 255, 0.3);
   transform: scale(1.05);
+}
+
+.close-history-button:active {
+  transform: scale(0.95);
 }
 
 .chat-history-list {

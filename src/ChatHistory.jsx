@@ -4,7 +4,7 @@ import { db } from './firebase';
 import { collection, query, where, orderBy, onSnapshot, addDoc, deleteDoc, doc, serverTimestamp, updateDoc, getDocs, writeBatch, limit } from 'firebase/firestore';
 import './ChatHistory.css';
 
-const ChatHistory = ({ user, currentChatId, onSelectChat, onNewChat, darkMode }) => {
+const ChatHistory = ({ user, currentChatId, onSelectChat, onNewChat, onClose, darkMode }) => {
   const [chats, setChats] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -230,9 +230,14 @@ const ChatHistory = ({ user, currentChatId, onSelectChat, onNewChat, darkMode })
     <div className={`chat-history ${darkMode ? 'dark-mode' : ''}`}>
       <div className="chat-history-header">
         <h3>Chat History</h3>
-        <button className="new-chat-button" onClick={onNewChat} title="New Chat">
-          <Plus size={18} />
-        </button>
+        <div className="header-buttons">
+          <button className="new-chat-button" onClick={onNewChat} title="New Chat">
+            <Plus size={18} />
+          </button>
+          <button className="close-history-button" onClick={onClose} title="Close Chat History">
+            <X size={18} />
+          </button>
+        </div>
       </div>
 
       {/* Category Filter */}
