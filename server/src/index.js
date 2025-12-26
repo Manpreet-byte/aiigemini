@@ -16,8 +16,11 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_TEXT_MODEL = 'gemini-2.5-flash-preview-09-2025';
-const GEMINI_VISION_MODEL = 'gemini-1.5-pro-latest';
+const GEMINI_TEXT_MODEL = process.env.GEMINI_TEXT_MODEL || 'gemini-2.5-flash-preview-09-2025';
+const GEMINI_VISION_MODEL = process.env.GEMINI_VISION_MODEL || 'gemini-1.5-flash';
+// Use v1beta for both endpoints (supports systemInstruction)
+const GEMINI_API_VERSION_TEXT = process.env.GEMINI_API_VERSION_TEXT || 'v1beta';
+const GEMINI_API_VERSION_VISION = process.env.GEMINI_API_VERSION_VISION || 'v1beta';
 
 if (!GEMINI_API_KEY) {
   console.warn('[WARN] GEMINI_API_KEY is not set. Text/Vision endpoints will fail.');
@@ -34,7 +37,7 @@ app.post('/api/chat', async (req, res) => {
       return res.status(500).json({ error: 'Server misconfigured: GEMINI_API_KEY missing' });
     }
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_TEXT_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+    const url = `https://generativelanguage.googleapis.com/${GEMINI_API_VERSION_TEXT}/models/${GEMINI_TEXT_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -59,7 +62,7 @@ app.post('/api/vision', async (req, res) => {
       return res.status(500).json({ error: 'Server misconfigured: GEMINI_API_KEY missing' });
     }
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_VISION_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+    const url = `https://generativelanguage.googleapis.com/${GEMINI_API_VERSION_VISION}/models/${GEMINI_VISION_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -80,4 +83,6 @@ app.post('/api/vision', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`[server] Listening on http://localhost:${PORT}`);
   console.log(`[server] Allowed origin: ${ALLOWED_ORIGIN}`);
+  console.log(`[server] Text model: ${GEMINI_TEXT_MODEL} (version: ${GEMINI_API_VERSION_TEXT})`);
+  console.log(`[server] Vision model: ${GEMINI_VISION_MODEL} (version: ${GEMINI_API_VERSION_VISION})`);
 });

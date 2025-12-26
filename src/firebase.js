@@ -29,3 +29,17 @@ export const db = getFirestore(app);
 
 // Initialize Firebase Storage and export
 export const storage = getStorage(app);
+
+// Export a flag indicating whether required Firebase env vars are present
+const requiredVars = [
+  'VITE_FIREBASE_API_KEY',
+  'VITE_FIREBASE_AUTH_DOMAIN',
+  'VITE_FIREBASE_PROJECT_ID',
+  'VITE_FIREBASE_STORAGE_BUCKET',
+  'VITE_FIREBASE_MESSAGING_SENDER_ID',
+  'VITE_FIREBASE_APP_ID'
+];
+
+export const isFirebaseConfigured = requiredVars.every(
+  (k) => import.meta.env && import.meta.env[k] && String(import.meta.env[k]).length > 0
+);

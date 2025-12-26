@@ -7,8 +7,8 @@ import { db } from './firebase';
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, where, updateDoc, doc } from 'firebase/firestore';
 
 // --- CONFIGURATION ---
-// Backend API base URL (defaults to local dev server, or Vercel API routes in production)
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:3001/api' : '/api');
+// Backend API base URL (defaults to local dev server)
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 const API_URL = `${API_BASE_URL}/chat`;
 const VISION_API_URL = `${API_BASE_URL}/vision`;
 const SYSTEM_INSTRUCTION = "You are a helpful and friendly AI chat assistant. Keep your responses concise and engaging, and always answer truthfully and ethically. Respond using markdown. If the user asks you to generate, create, or draw an image, respond with '[IMAGE_REQUEST: description]' where description is a detailed prompt for the image they want.";
@@ -52,6 +52,7 @@ const App = ({ user, onLogout }) => {
     const saved = localStorage.getItem('speechEnabled');
     return saved ? JSON.parse(saved) : false;
   });
+  // Shortcuts help modal
   const [showShortcuts, setShowShortcuts] = useState(false);
   
   // Ref to automatically scroll to the bottom of the chat area
@@ -78,6 +79,45 @@ const App = ({ user, onLogout }) => {
   useEffect(() => {
     localStorage.setItem('speechEnabled', JSON.stringify(speechEnabled));
   }, [speechEnabled]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ctrl/Cmd + K: New chat
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        handleNewChat();
+      }
+      // Ctrl/Cmd + /: Toggle history
+      if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+        e.preventDefault();
+        setShowHistory(prev => !prev);
+      }
+      // Ctrl/Cmd + Shift + D: Toggle dark mode
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'D') {
+        e.preventDefault();
+        setDarkMode(prev => !prev);
+      }
+      // Ctrl/Cmd + Shift + S: Toggle speech
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'S') {
+        e.preventDefault();
+        setSpeechEnabled(prev => !prev);
+      }
+      // Escape: Close modals
+      if (e.key === 'Escape') {
+        setShowProfileModal(false);
+        setShowShortcuts(false);
+      }
+      // ?: Show shortcuts
+      if (e.shiftKey && e.key === '?') {
+        e.preventDefault();
+        setShowShortcuts(prev => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Focus input on load
   useEffect(() => {
@@ -727,6 +767,7 @@ const App = ({ user, onLogout }) => {
             >
               {darkMode ? '☀️' : '🌙'}
             </button>
+            {/* Keyboard shortcuts icon removed as requested */}
             <button 
               onClick={handleExportChat} 
               className="icon-button" 
@@ -855,6 +896,46 @@ const App = ({ user, onLogout }) => {
         />
       )}
 
+      {/* Keyboard Shortcuts Modal */}
+      {showShortcuts && (
+        <div className="modal-overlay" onClick={() => setShowShortcuts(false)}>
+          <div className="modal-content shortcuts-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Keyboard Shortcuts</h2>
+              <button onClick={() => setShowShortcuts(false)} className="modal-close-button">×</button>
+            </div>
+            <div className="shortcuts-list">
+              <div className="shortcut-item">
+                <kbd>Ctrl</kbd> + <kbd>K</kbd>
+                <span>New chat</span>
+              </div>
+              <div className="shortcut-item">
+                <kbd>Ctrl</kbd> + <kbd>/</kbd>
+                <span>Toggle chat history</span>
+              </div>
+              <div className="shortcut-item">
+                <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>D</kbd>
+                <span>Toggle dark mode</span>
+              </div>
+              <div className="shortcut-item">
+                <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd>
+                <span>Toggle text-to-speech</span>
+              </div>
+              <div className="shortcut-item">
+                <kbd>Shift</kbd> + <kbd>?</kbd>
+                <span>Show shortcuts</span>
+              </div>
+              <div className="shortcut-item">
+                <kbd>Esc</kbd>
+                <span>Close modals</span>
+              </div>
+            </div>
+            <p style={{ marginTop: '1rem', fontSize: '0.85rem', opacity: 0.7 }}>
+              On Mac, use <kbd>Cmd</kbd> instead of <kbd>Ctrl</kbd>
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

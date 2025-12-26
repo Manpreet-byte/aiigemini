@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Bot, Mail, Lock, User as UserIcon, AlertCircle, CheckCircle } from 'lucide-react';
 import './Auth.css';
-import { auth, googleProvider } from './firebase';
+import { auth, googleProvider, isFirebaseConfigured } from './firebase';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -34,6 +34,11 @@ const AuthPage = ({ onAuthSuccess }) => {
     e.preventDefault();
     setError('');
     setSuccess('');
+
+    if (!isFirebaseConfigured) {
+      setError('App not configured: set VITE_FIREBASE_* values in .env and add localhost:5174 to Firebase Authorized Domains.');
+      return;
+    }
 
     // Basic validation
     if (!formData.email || !formData.password) {
@@ -134,6 +139,12 @@ const AuthPage = ({ onAuthSuccess }) => {
     setSuccess('');
     setLoading(true);
 
+    if (!isFirebaseConfigured) {
+      setLoading(false);
+      setError('App not configured: set VITE_FIREBASE_* values in .env and enable Google provider in Firebase Console.');
+      return;
+    }
+
     try {
       // Sign in with Google using Firebase
       const result = await signInWithPopup(auth, googleProvider);
@@ -179,6 +190,14 @@ const AuthPage = ({ onAuthSuccess }) => {
           <h1>Welcome to Gemini Chat</h1>
           <p>Your AI-powered conversation assistant</p>
         </div>
+
+        {/* Config Warning */}
+        {!isFirebaseConfigured && (
+          <div className="error-message" style={{ marginTop: '0.5rem' }}>
+            <AlertCircle size={18} />
+            Firebase is not configured. Add VITE_FIREBASE_* values in .env and authorize domains.
+          </div>
+        )}
 
         {/* Toggle Tabs */}
         <div className="auth-tabs">
@@ -286,7 +305,7 @@ const AuthPage = ({ onAuthSuccess }) => {
           <button
             type="submit"
             className="auth-button auth-button-primary"
-            disabled={loading}
+            disabled={loading || !isFirebaseConfigured}
           >
             {loading ? (
               <>
@@ -308,7 +327,7 @@ const AuthPage = ({ onAuthSuccess }) => {
         <button
           className="auth-button google-button"
           onClick={handleGoogleSignIn}
-          disabled={loading}
+          disabled={loading || !isFirebaseConfigured}
         >
           <svg className="google-icon" viewBox="0 0 24 24">
             <path
